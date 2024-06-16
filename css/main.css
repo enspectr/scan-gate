@@ -4,4 +4,22 @@ body {
 	border: 0;
 	background: #212529;
 	color: white;
+	font-family: sans-serif;
 }
+
+table {
+	width: 94%;
+	max-width: 40em;
+	margin: 3%;
+	font-size: 120%;
+	text-align: center;
+}
+
+td {
+	min-width: 1em;
+}
+
+th {
+	text-align: left;
+}
+
