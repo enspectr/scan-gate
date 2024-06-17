@@ -2,15 +2,30 @@
 
 (() => {
 
-const bt_connect = document.getElementById('connect');
-const bt_devname = document.getElementById('devname');
-const version    = document.getElementById('version');
-const mod_status = document.getElementById('mod-status');
+const bt_connect    = document.getElementById('connect');
+const bt_devname    = document.getElementById('devname');
+const version       = document.getElementById('version');
+const mod_status    = document.getElementById('mod-status');
+const mode          = document.getElementById('mode');
+const mode_switch   = document.getElementById('mode-switch');
+const manual_action = document.getElementById('manual-action');
 
 const bt_svc_id  = 0xFFE0;
 const bt_char_id = 0xFFE1;
 let   bt_char    = null;
 let   bt_msg_buf = '';
+
+// Status values
+const sta_unknown     = 0;
+const sta_up          = 1;
+const sta_down        = 2;
+const sta_moving      = 3;
+const sta_approaching = 4;
+const sta_seek_up     = 5;
+const sta_seek_down   = 6;
+const sta_failed      = 7;
+
+let last_target = sta_unknown;
 
 const crc8_table = [
 	0x00,  0x07,  0x0e,  0x09,  0x1c,  0x1b,  0x12,  0x15,  0x38,  0x3f,  0x36,  0x31,  0x24,  0x23,  0x2a,  0x2d, 
@@ -46,7 +61,7 @@ function isConnected()
 	return bt_char !== null;
 }
 
-function setClickable(el, cb, txt)
+function setClickable(el, txt, cb)
 {
 	el.onclick = cb;
 	el.classList.add('clickable');
@@ -60,12 +75,36 @@ function resetClickable(el, txt)
 	el.textContent = txt;	
 }
 
+function target_handler(val)
+{
+	last_target = val;
+}
+
+function manual_mode_handler(val)
+{
+	if (val) {
+		mode.textContent = 'manual';
+		setClickable(mode_switch, 'switch to auto', (event) => {sendMsg('#Sm:0\r');});
+		if (last_target == sta_up)
+			setClickable(manual_action, 'down', (event) => {sendMsg('#St:0\r');});
+		else if (last_target == sta_down)
+			setClickable(manual_action, 'up',   (event) => {sendMsg('#St:1\r');});
+	}
+	else {
+		mode.textContent = 'auto';
+		setClickable(mode_switch, 'switch to manual', (event) => {sendMsg('#Sm:1\r');});
+		resetClickable(manual_action, '');
+	}
+}
+
 const status_handlers = {
-	'v' : (val) => {version.textContent = 'v.' + (val >> 4) + '.' + (val & 0xf);}
+	'v' : (val) => {version.textContent = 'v.' + (val >> 4) + '.' + (val & 0xf);},
+	't' : target_handler,
+	'm' : manual_mode_handler,
 };
 
 const adjustment_handlers = {
-	'm' : (val) => { if (val) setClickable(mod_status, saveAdj, 'save changes'); else resetClickable(mod_status, 'not modified'); }
+	'm' : (val) => { if (val) setClickable(mod_status, 'save changes', saveAdj); else resetClickable(mod_status, 'not modified'); }
 };
 
 const monitoring_handlers = {
@@ -102,7 +141,7 @@ function initPage()
 		document.body.innerHTML = '<div class="alert-page">The Bluetooth is not supported in this browser. Please try another one.</div>';
 		return;
 	}
-	setClickable(bt_connect, onConnect, 'connect');
+	setClickable(bt_connect, 'connect', onConnect);
 	initAdj('pos-up',       'u', 128);
 	initAdj('pos-down',     'd', 128);
 	initAdj('min-speed',    's');
@@ -197,6 +236,7 @@ function onBTConnected(device, characteristic)
 	device.addEventListener('gattserverdisconnected', onDisconnection);
 	bt_char = characteristic;
 	resetClickable(bt_connect, 'connected')
+	document.getElementById('mode-title').textContent = 'mode';
 }
 
 function connectTo(device)
@@ -247,7 +287,7 @@ function doConnect(devname)
 	})
 	.catch((err) => {
 		console.log('Failed to discover BT devices');
-		setClickable(bt_connect, onConnect, 'connect')
+		setClickable(bt_connect, 'connect', onConnect)
 	});
 }
 
