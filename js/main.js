@@ -6,6 +6,7 @@ const bt_connect    = document.getElementById('connect');
 const bt_devname    = document.getElementById('devname');
 const version       = document.getElementById('version');
 const mod_status    = document.getElementById('mod-status');
+const mod_revert    = document.getElementById('mod-revert');
 const mode          = document.getElementById('mode');
 const mode_switch   = document.getElementById('mode-switch');
 const manual_action = document.getElementById('manual-action');
@@ -105,14 +106,25 @@ function manual_mode_handler(val)
 	}
 }
 
+function mod_status_handler(val)
+{
+	if (val) {
+		setClickable(mod_status, 'save changes', (event) => {sendMsg('#Asave\r');});
+		setClickable(mod_revert, 'revert', (event) => {sendMsg('#Aback\r');});
+	} else {
+		resetClickable(mod_status, 'not modified');
+		resetClickable(mod_revert, '');
+	}
+}
+
 const status_handlers = {
 	'v' : (val) => {version.textContent = 'v.' + (val >> 4) + '.' + (val & 0xf);},
 	't' : (val) => {last_target = val;},
-	'm' : manual_mode_handler,
+	'm' : manual_mode_handler
 };
 
 const adjustment_handlers = {
-	'm' : (val) => { if (val) setClickable(mod_status, 'save changes', saveAdj); else resetClickable(mod_status, 'not modified'); }
+	'm' : mod_status_handler
 };
 
 const monitoring_handlers = {
@@ -287,11 +299,6 @@ function onMessage(msg)
 	default:
 		console.log('unknown message type: ' + msg[1]);
 	}
-}
-
-function saveAdj(event)
-{
-	sendMsg('#Asave\r');
 }
 
 function sendMsg(msg)
