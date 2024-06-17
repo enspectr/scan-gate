@@ -43,6 +43,7 @@ th {
 
 .hidden {
 	display: none;
+	visibility:hidden;
 }
 
 #details td {
