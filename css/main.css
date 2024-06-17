@@ -34,3 +34,17 @@ th {
 	text-align: left;
 }
 
+#show-details {
+	text-align: center;
+	font-size: 100%;
+	color: #888;
+	margin: 10%;
+}
+
+.hidden {
+	display: none;
+}
+
+#details td {
+	text-align: right;
+}

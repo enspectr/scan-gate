@@ -9,6 +9,7 @@ const mod_status    = document.getElementById('mod-status');
 const mode          = document.getElementById('mode');
 const mode_switch   = document.getElementById('mode-switch');
 const manual_action = document.getElementById('manual-action');
+const show_details  = document.getElementById('show-details');
 
 const bt_svc_id  = 0xFFE0;
 const bt_char_id = 0xFFE1;
@@ -24,6 +25,18 @@ const sta_approaching = 4;
 const sta_seek_up     = 5;
 const sta_seek_down   = 6;
 const sta_failed      = 7;
+
+// Error bits
+const err_none         = 0;
+const err_initializing = 1;    // '-' Initializing, position is unknown
+const err_ramp         = 2;    // 'r' Ramp is too long
+const err_run          = 4;    // 'o' The position is out of the marker
+const err_sense        = 8;    // 'S' Optical sensor failure
+const err_timeout      = 0x10; // 't' Positioning timeout
+const err_blocking_    = 0x20; // First blocking error, so no move with such errors
+const err_power        = 0x20; // 'P' Bad power voltage
+const err_overheat     = 0x40; // 'h' Temperature is too high
+const err_blocked      = 0x80; // 'b' Can't move (detected by motor current)
 
 let last_target = sta_unknown;
 
@@ -75,11 +88,6 @@ function resetClickable(el, txt)
 	el.textContent = txt;	
 }
 
-function target_handler(val)
-{
-	last_target = val;
-}
-
 function manual_mode_handler(val)
 {
 	if (val) {
@@ -99,7 +107,7 @@ function manual_mode_handler(val)
 
 const status_handlers = {
 	'v' : (val) => {version.textContent = 'v.' + (val >> 4) + '.' + (val & 0xf);},
-	't' : target_handler,
+	't' : (val) => {last_target = val;},
 	'm' : manual_mode_handler,
 };
 
@@ -135,6 +143,105 @@ function initAdj(id, tag, zoff = 0)
 	}
 }
 
+function initMon(id, tag)
+{
+	const val = document.getElementById(id + '-val');
+	monitoring_handlers[tag] = (v) => {
+		val.textContent = v.toString();
+	}
+}
+
+function target_name()
+{
+	switch (last_target) {
+	case sta_up:
+		return 'up';
+	case sta_down:
+		return 'down';
+	default:
+		return 'unknown';
+	}
+}
+
+function status_name(sta) {
+	switch (sta) {
+	case sta_unknown:
+		return 'unknown';
+	case sta_up:
+		return 'up';
+	case sta_down:
+		return 'down';
+	case sta_moving:
+		return 'moving ' + target_name()
+	case sta_approaching:
+		return 'approaching ' + target_name()
+	case sta_seek_up:
+		return 'seeking up';
+	case sta_seek_down:
+		return 'seeking down';
+	case sta_failed:
+		return 'failed';
+	default:
+		return 'unknown<' + sta + '>';
+	}
+}
+
+function errors_info(val)
+{
+	if (val == err_none)
+		return 'none';
+
+	let errs = [];
+	if (val & err_initializing)
+		errs.push('init');
+	if (val & err_ramp)
+		errs.push('ramp');
+	if (val & err_run)
+		errs.push('overrun');
+	if (val & err_sense)
+		errs.push('sense');
+	if (val & err_timeout)
+		errs.push('timeout');
+	if (val & err_power)
+		errs.push('power');
+	if (val & err_overheat)
+		errs.push('overheat');
+	if (val & err_blocked)
+		errs.push('blocked');
+
+	return errs.join(', ');	
+}
+
+function mains_info(val)
+{
+	if (val < 0)      return 'unknown';
+	else if (val > 0) return 'good';
+	else              return 'absent';
+}
+
+function showDetails(event)
+{
+	show_details.onclick = null;
+	show_details.classList.add('hidden');
+	document.getElementById('details').classList.remove('hidden');
+
+	initMon('pw_mv',     'pw');
+	initMon('dcdc_mv',   'dc');
+	initMon('vcc_mv',    'vc');
+	initMon('curr_ma',   'mc');
+	initMon('mcu_temp',  'tc');
+	initMon('sens_up',   'su');
+	initMon('sens_down', 'sd');
+
+	const curr_status   = document.getElementById('status-val');
+	const errors        = document.getElementById('errors-val');
+	const mains_status  = document.getElementById('ac_status-val');
+
+	status_handlers['c']      = (val) => {curr_status.textContent = status_name(val);};
+	status_handlers['e']      = (val) => {errors.textContent = errors_info(val);};
+	monitoring_handlers['ac'] = (val) => {mains_status.textContent = mains_info(val);};
+}
+
 function initPage()
 {
 	if (!navigator.bluetooth) {
@@ -147,6 +254,7 @@ function initPage()
 	initAdj('min-speed',    's');
 	initAdj('cur-limit',    'l');
 	initAdj('acceleration', 'a');
+	show_details.onclick = showDetails;
 }
 
 function handleMessage(msg, base, handlers)
