@@ -3,8 +3,19 @@ body {
 	padding: 0;
 	border: 0;
 	background: #212529;
-	color: white;
+	color: #aaa;
 	font-family: sans-serif;
+}
+
+.alert-page {
+	font-size: 150%;
+	margin: 1em;
+	text-align: center;	
+}
+
+.clickable {
+	cursor: pointer;
+	color: white;
 }
 
 table {
