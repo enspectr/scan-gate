@@ -224,6 +224,29 @@ function errors_info(val)
 	return errs.join(', ');	
 }
 
+const month_names = {
+	1: 'Jan',
+	2: 'Feb',
+	3: 'Mar',
+	4: 'Apr',
+	5: 'May',
+	6: 'Jun',
+	7: 'Jul',
+	8: 'Aug',
+	9: 'Sep',
+	10: 'Oct',
+	11: 'Nov',
+	12: 'Dec',
+};
+
+function build_info(val)
+{
+	const year  = 2024 + val/512|0;
+	const month = (val%512)/32|0;
+	const day   = val%32|0;
+	return month_names[month] + day + ' ' + year;
+}
+
 function mains_info(val)
 {
 	if (val < 0)      return 'unknown';
@@ -248,9 +271,11 @@ function showDetails(event)
 	const curr_status   = document.getElementById('status-val');
 	const errors        = document.getElementById('errors-val');
 	const mains_status  = document.getElementById('ac_status-val');
+	const build_date    = document.getElementById('build_date-val');
 
 	status_handlers['c']      = (val) => {curr_status.textContent = status_name(val);};
 	status_handlers['e']      = (val) => {errors.textContent = errors_info(val);};
+	status_handlers['b']      = (val) => {build_date.textContent = build_info(val);};
 	monitoring_handlers['ac'] = (val) => {mains_status.textContent = mains_info(val);};
 }
 
